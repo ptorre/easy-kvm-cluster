@@ -27,6 +27,7 @@ ssh_authorized_keys:
 ```
 
 ## Full Example:
+- Make sure you have the dependencies installed: `cloud-localds`, `qemu-img` and `virt-install`
 - Save the bash script [vstart.sh](/vstart.sh) and make it executable `chmod +x vstart`
 - Save the [user-data.yaml](/user-data.yaml) and modify to add your own ssh public keys
 - Download some cloud images:
