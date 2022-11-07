@@ -1,0 +1,117 @@
+#cloud-config
+---
+# better to use your own public key here
+ssh_authorized_keys:
+  - "ssh-rsa \
+  AAAAB3NzaC1yc2EAAAADAQABAAABgQC7O1Y3p4/D2XnWeiMoAx9GYPNCdoe11F1Jy42ZoG\
+  iczg6wPvAJhyTzI4q6cTMemZZFDhBLY6RyBWz8yPhIWZIvO+mKxsEuJpg8LSGcgrKmHj9H\
+  7OUslXp/ppyPdeqFmKruLxtYpb3/HcZfaktcOAOl9BLXpF6nZzCfP6HVFlX2RdF2akbxJS\
+  j1bChlgrgP1WzyGFx7waSupxfhzudXHbUJoq007hnzpeJJJbpv3lATbn/3Bq9GTv2BjZiJ\
+  RS7AyvmoYawodjntzeCGI4GlHEfRU8Fsla12lSQ/w4k60/6cLR7eDWZXV+93xIgU25DKMH\
+  Gc5aBLJfMa/yQFHrREOGAhk/osO2CBz3J0JUOEDgkSWbEgHgiWZaso4/TSXjoV+kI+2ubv\
+  CVcfDBJSItCtaJoTeIRaG/ruYoX+S9Z43V6k2KiMQv69U4K8vDkwqDQdQd2paHFCgorlmk\
+  PXTFF2ner78h0RTNB69AaPURV/ljPBOYXPCS4Qy4d9aJpHKeFq7GU="
+
+apt:
+  preserve_sources_list: true
+  sources:
+    kubernetes.list:
+      source: >
+        deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg]
+        https://apt.kubernetes.io/ kubernetes-xenial main
+
+packages:
+  - containerd
+  - kubectl
+  - kubeadm
+  - kubelet
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/20permit-tunnel.conf
+    content: |
+      # Allow admin to use tun device point-to-point forwarding
+      Match User admin
+        PermitTunnel point-to-point
+  - path: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+  - path: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+  - path: /tmp/config.toml
+    # distro containerd config file is broken for k8s, replace it
+    content: |
+      version = 2
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            discard_unpacked_layers = true
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                  SystemdCgroup = true
+  - path: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+    # prepared with `curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | base64`
+    content: !!binary |
+      xsBNBGA9EFkBCAC1ilzST0wns+uwZyEA5IVtYeyAuXTaQUEAd70SqIlQpDd4EyVix3SCanQIu8dG
+      9Zq3+x28WBb2OuXP9oc06ybOWdu2m7N5PY0BUT4COA36JV/YrxmNs+5/M+YnDHppv63jgRIOkzXz
+      XNo6SwTsl2xG9fKB3TS0IMvBkWdw5PGrBM5GghRcecgoSAAwRbWJXORHGKVwlV6tOxQZ/xqA08hP
+      JneMfsMFPOXsitgGRHoXjlUWLVeJ70mmIYsC/pBglIwCzmdD8Ee39MrlSXbuXVQiz38iHfnvXYpL
+      EmgNXKzI0DH9tKg8323kALzqaJlLFOLJm/uVJXRUEfKS3LhVZQMzABEBAAHNUVJhcHR1cmUgQXV0
+      b21hdGljIFNpZ25pbmcgS2V5IChjbG91ZC1yYXB0dXJlLXNpZ25pbmcta2V5LTIwMjEtMDMtMDEt
+      MDhfMDFfMDkucHViKcLAaAQTAQgAHAUCYD0QWQkQ/uqRaTB+oHECGwMFCQPDCrACGQEAAHtlCACx
+      SWMp3yRcLmsHhxGDt59nhSNXhouWiNePSMe5vETQA/lhip9Zx/NPRCa4q5jpIDBlEYOg67Yanztc
+      jSWGSI35Xblq43H4uLSxh4PtKzZMo+Uj8n2VNHOZXBdGcsODcU3ynF64r7eTQevUe2aU0KN2o656
+      O3HrE4itOVKYwnnkmNskG45b9b7DJnsQ6WPszUc8lNhsa2gBI6vfLl68vjj7PlWw030BM/RoMEPp
+      oOApohHosfnNhxJmE1AxwBkMEzyo2kZhPZGh85LDnDbAvjSFKqYSPReKmRFjLlo3DPVHZ/deQn6n
+      oHbgUChLo21FefhlZO6tysrb283MWMIyY/YSzsBNBGA9EFkBCADcdO/Aw1qudZORZCNLz3vTiQSF
+      cUFYyScfJJnwUsg8fy0kgg9olFY0GK5icT6n/shc1RlIpuqrOQYBZgtK3dSZfOAXE2N20HUvC+nr
+      KKuXXX+jcM/X1kHxwX5tG6fB1fyNH0p/QqszEfYRHJu0Y4PonTYIslITnEzlN4hUN6/mx1+mWPl4
+      P4R7/h6+p7Q2jtaClEtddF0eeOf16Ma5S8fff80uZCLJoVu3lOXCT22oCf7qmH2XddmqGisUScqw
+      mbmuv30tdQedn+8njKo2pfpVF1Oa67CWRXdKTknuZybxI9Ipcivy8CISL2Do0uzij7SR7keVf7G1
+      Q3K3iJ0wn6mDABEBAAHCwF8EGAEIABMFAmA9EFkJEP7qkWkwfqBxAhsMAAA/3AgAFJ2hEp2144fz
+      gtNWHOVFv27hsrO7wYFZwoic9lHSl4iEw8mJc/3kEXdg9Vf9m1zbG/kZ6slmzpfv7zDAdN3h3HT0
+      B1yrb3xXzRX0zhOYAbQSUnc6DemhDZoDWt/wVceKfzvebB9VTDzRBUVzxCduvY6ij0p2APZpnTrz
+      nvCPoCHkfzBMC3Zyk1FueiPTPoP19M0BProMy8qDVSkFr0uX3PM54hQN6mGRQg5HVVBxUNaMnn2y
+      OQcxbQ/T/dKlojdpRmvpGyYjfrvyExE8owYn8L7ly2N76GcY6kiN1CmTnCgdrbU0SPacm7XbxTYl
+      QHwJCEa9Hf4/nuiBaxwXKuc/y8bATQRfyX5eAQgA0z1F3ZDbtOe1/j90k1cQsyaVNjJ/rVGpinUn
+      VWpmxnmBSDXKfxBsDRoXW9GtQWx7NUlmGW88IeHevqd5OAAc1TDvkaTLv2gcfROWjp+XPBsx42f1
+      RGoXqiy4UlHEgswoUmXDeY89IUxoZgBmr4jLekTM0n2yIWT49ZA8wYhndEMHf6zj5ya+LWj67kd3
+      nAY4R7YtfwTBnf5Y9Be80Jwo6ez66oKRDwU/I6PcF9sLzsl7MEiPxrH2xYmjiXw52Hp4GhIPLBfr
+      t1jrNGdtHEq+pEu+ih6U32tyY2LHx7fDQ8PMOHtx/D8EMzYkT/bV3jAEikM93pjI/3pOh8Y4oWPa
+      hQARAQABzbpnTGludXggUmFwdHVyZSBBdXRvbWF0aWMgU2lnbmluZyBLZXkgKC8vZGVwb3QvZ29v
+      Z2xlMy9wcm9kdWN0aW9uL2JvcmcvY2xvdWQtcmFwdHVyZS9rZXlzL2Nsb3VkLXJhcHR1cmUtcHVi
+      a2V5cy9jbG91ZC1yYXB0dXJlLXNpZ25pbmcta2V5LTIwMjAtMTItMDMtMTZfMDhfMDUucHViKSA8
+      Z2xpbnV4LXRlYW1AZ29vZ2xlLmNvbT7CwGgEEwEIABwFAl/Jfl4JEItXxcKDb0vrAhsDBQkDwwqw
+      AhkBAABBeggAmnpK6OmlCSXd5lba7SzjnsFfHrdY3qeXsJqTq3sP6Wo0VQXiG1dWsFZ9P/BHHpxX
+      o5j+lhXHQlqLg1SEv0JkRUFfTemFzfD4sGpa0Vd20yhQR5MGtXBB+AGnwhqNHA7yW/DdyZzP0Zm9
+      Skhiq+2V6ZpC7WFaq+h4M5frJ65R9F8LJea90sr6gYL0WE0CmaSqpgRHdbnYnlaC0hffPJCnjQ4x
+      WvkNUo2Txlvl7pIBPJAVG0g8fGPKugrM4d1VWPuSVHqopkYCdgA2Nv95RLQGTrZsHAZYWNHD1lao
+      GteBO5ExkligulvejX8vSuy+GKafJ0zBK7rNfNWqsMDXzKp6Z87ATQRfyX5eAQgAw0ofinQXjYyH
+      JVVZ0SrdEE+efd8heFlWbf04DbmhGebypJ6KFVSKvnCSH2P95VKqvE3uHRI6HbRcinuV7noKOqo8
+      7PE2BXQgB16V0aFKJU9eJvqpCfK4Uq6TdE8SI1iWyXZtzZa4E2puUSicN0ocqTVMcqJZx3pV8asi
+      gwpMQUg5kesXHX7d8HUJeSJCAMMXup8sJklLaZ3Ri0SXSa2iYmlhdiAYxTYN70xGI+HqHoWXeF67
+      xMi1azGymeZun9aOkFEbs0q1B/SU/4r2agpoT6aLApV119G24vStGf/rlcpOr++prNzudKyKtC9G
+      HoTPBvvqphjuNtftKgi5HQ+f4wARAQABwsBfBBgBCAATBQJfyX5eCRCLV8XCg29L6wIbDAAAGxoI
+      AMO5YUlhJWaRldUiNm9itujwfd31SNbUGFd+1iBJQibGoxfv2Q3ySdnep3LkEpXh+VkXHHOIWXys
+      MrAP3qaqwp8HO8irE6GeLMPMbCRdVLUORDbZHQK1YgSR0uGNlWeQxFJq+RIIRrWRYfWumi6HjFTP
+      562Qi7LQ1aDyhKS6JB7v4HmwsH0/5/VNXaJRSKL4OnigApecTsfq83AFae0eD+du4337nc93SjHS
+      4T67LRtMOWG8nzz8FjDj6fpFBeOXmHUe5CipNPVayTZBBidCkEOopqkdU59JMruHL5H6pwlBdK65
+      +wnQai0gr9UEYYK+kwoUH+8p1rD8+YBnVY4d7SM=
+
+runcmd:
+  - sed -i -e '/^AcceptEnv/s/^/#/' /etc/ssh/sshd_config
+  - /etc/init.d/ssh reload
+  - modprobe overlay
+  - modprobe br_netfilter
+  - sysctl --system
+  - apt-mark hold kubelet kubeadm kubectl
+  - mkdir -p /etc/containerd
+  - mv /tmp/config.toml /etc/containerd/config.toml
+  - systemctl restart containerd.service
+  - systemctl restart kubelet.service
+...
