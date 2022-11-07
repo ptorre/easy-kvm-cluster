@@ -9,9 +9,8 @@ Simple steps:
   - https://cdn.amazonlinux.com/os-images/2.0.20221004.0/
 1. Copy and grow the downloaded cloud image filesystem
 1. Create a nocloud data source for cloud-init starting with these:
-    [user-data.yaml](/3476e0608a9884eeeb417308bf6a569d/#file-user-data-yaml)
-    [amzn2-user-data.yaml](/3476e0608a9884eeeb417308bf6a569d/#file-amzn2-user-data-yaml)
-1. Run virt-install to start the VMs as many as you need, use [vstart.sh](/3476e0608a9884eeeb417308bf6a569d/#file-vstart-sh)
+    [user-data.yaml](/user-data.yaml) and [amzn2-user-data.yaml](/amzn2-user-data.yaml)
+1. Run virt-install to start the VMs as many as you need, use [vstart.sh](/vstart.sh)
 
 The below is a bash script that I use to quickly startup multiple local instances.
 The instance disk file names will be based on the hostname used.
@@ -28,13 +27,13 @@ ssh_authorized_keys:
 ```
 
 ## Full Example:
-- Save the bash script [vstart](/3476e0608a9884eeeb417308bf6a569d/#file-vstart-sh) and make it executable `chmod +x vstart`
-- Save the [user-data.yaml](/3476e0608a9884eeeb417308bf6a569d/#file-user-data-yaml) and modify to add your own ssh public keys
+- Save the bash script [vstart.sh](/vstart.sh) and make it executable `chmod +x vstart`
+- Save the [user-data.yaml](/user-data.yaml) and modify to add your own ssh public keys
 - Download some cloud images:
   - `wget https://cdimage.debian.org/cdimage/cloud/bullseye/20221020-1174/debian-11-genericcloud-amd64-20221020-1174.qcow2`
   - `wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img`
   - `wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2`
-    - you'll need to download and modify [amzn2-user-data.yaml](/3476e0608a9884eeeb417308bf6a569d/#file-amzn2-user-data-yaml) as well in this case
+    - you'll need to download and modify [amzn2-user-data.yaml](/amzn2-user-data.yaml) as well in this case
 - _its a good idea to verify the images using the signatures, but I leave that up to you_
 - Start some virtual machines:
 ```
