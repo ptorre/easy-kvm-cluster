@@ -1,46 +1,67 @@
 #!/usr/bin/bash
+#
+# Create and run VMs based on cloud-init images
+#
 
 vstart () {
     local hostname=$1
-    local userdata="$2"
-    local image="$3"
-    local memory=2000
+    local image="$2"
+    local userdata="$3"
+    local memory=${4:-1024}
     local vcpu=2
     local disk=$hostname.raw
     local size=8G
     local localds=$hostname.img
+    local graphics=none
+    local os=generic
+    local needs_expansion=true
 
-    # Convert downloaded image to raw
+    if [[ $image =~ [Aa]mzn ]];then
+        os=rhel8.2
+        graphics=spice
+        needs_expansion=false
+    elif [[  $image =~ [Dd]ebian ]];then
+        os=debian10
+    elif [[  $image =~ [Uu]buntu ]];then
+        os=ubuntu20.04
+    else
+        fail "OS unknown $image needs to be added to script types!"
+    fi
+
+    # Make a raw copy of the base image
     qemu-img convert -p -O raw "$image" $disk
 
-    # Grow root filesystem
-    qemu-img resize -f raw $disk $size
+    if [[ $needs_expansion = true ]]; then
+        # Grow root filesystem as base image is small
+        qemu-img resize -f raw $disk $size
+    fi
 
     # Create a disk for cloud-init to utilize nocloud
     cloud-localds -H $hostname $localds "$userdata" &&
 
     # Spin up a virtual mahcine
-    virt-install --os-variant debian10 --graphics none --import \
-        --noautoconsole \
+    virt-install --import --noautoconsole \
         --network=default,model=virtio \
-        --name $hostname --memory $memory --vcpu $vcpu \
+        --graphics $graphics \
+        --os-variant $os \
+        --name $hostname \
+        --memory $memory \
+        --vcpu $vcpu \
         --disk "$disk,device=disk,bus=virtio" \
         --disk "$localds,device=disk,bus=virtio"
-
-    # For debugging remove --noautoconsole above to watch the console messages.
-    # You do that you can hit ctrl-] to exit the guest console after get back to
-    # the host prompt.  It will generally not be possible to log in at the console.
 }
 
+fail() {
+   echo "$*" >&2
+   exit 1
+}
 
-
-if (( $# == 3 )); then
-	vstart "$1" "$2" "$3"
-	rc=$?
-else
-    echo "Usage: $0 <hostname> <user-data.yaml> <generic cloud image source>"
+if (( $# < 3 )); then
+    echo "Usage: $0 <hostname> <generic cloud image source> <user-data.yaml> [memory in Mi]"
 	rc=1
+else
+	vstart "$1" "$2" "$3" "$4"
+	rc=$?
 fi
-
 exit $rc
 
