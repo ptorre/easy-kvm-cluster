@@ -38,10 +38,10 @@ ssh_authorized_keys:
 - _its a good idea to verify the images using the signatures, but I leave that up to you_
 - Start some virtual machines:
 ```
-./vstart control-node-1 user-data.yaml debian-11-genericcloud-amd64-20221020-1174.qcow2
-./vstart worker-node-debian user-data.yaml debian-11-genericcloud-amd64-20221020-1174.qcow2
-./vstart worker-node-ubuntu user-data.yaml ubuntu-22.10-server-cloudimg-amd64.img
-./vstart worker-node-amzn2 amzn-user-data.yaml amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2
+./vstart control-node-1 debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml 2048  # 2048MiB for control-plane-node (default is 1024MiB)
+./vstart worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml
+./vstart worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64.img user-data.yaml
+./vstart worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
 ...etc.
 ```
 
