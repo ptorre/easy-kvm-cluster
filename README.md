@@ -45,10 +45,14 @@ ssh_authorized_keys:
 ...etc.
 ```
 
-***After a little while (can be several minutes) the VM instances should be ready for you to ssh into them***
+*After a little while (can be several minutes) the VM instances should be ready for you to ssh into them*
 
 _**Running `virsh net-dhcp-leases default` or `virsh domifaddr <name>` will give you the
-ip addresses for the created VMs**_
+ip addresses for the created VMs.**_
+
+***By default these images will use have IP addresses assigned by dhcp.  You should reserve the addresses assiged to the control plane nodes using
+`virsh net-edit` OR use the control plane hostname instead of the IP address when executing `kubectl join`.  If you don't do this the cluster will stop working if the control plane nodes are ever given new IP addresses by dhcp.***
+
 **`debian`** is the default user for Debian and **`ubuntu`** is the default user for Ubuntu, **`ec2-user`** for Amazon Linux2, etc...
 
 After logging in you can run `cloud-init status --long --wait` and when that shows `status: done`,
