@@ -13,6 +13,7 @@ Simple steps:
 1. Create a nocloud data source for cloud-init starting with these:
     - [debian-user-data.yaml](/debian-user-data.yaml)
     - [amzn2-user-data.yaml](/amzn2-user-data.yaml)
+    - [fedora-user-data.yaml](/fedora-user-data.yaml)
 1. Run virt-install to start the VMs as many as you need, use [vstart.sh](/vstart.sh)
 
 The below is a bash script that can be used to quickly startup multiple local instances.
@@ -40,6 +41,8 @@ ssh_authorized_keys:
 wget https://cdimage.debian.org/cdimage/cloud/bullseye/20221020-1174/debian-11-genericcloud-amd64-20221020-1174.qcow2
 wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64-disk-kvm.img
 wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2
+wget https://download.fedoraproject.org/pub/fedora/linux/releases/36/Cloud/x86_64/images/Fedora-Cloud-Base-36-1.5.x86_64.raw.xz &&
+  xz --verbose -d Fedora-Cloud-Base-36-1.5.x86_64.raw.xz
 ```
 - _its a good idea to verify the images using the signatures, but I leave that up to you_
 - Start some virtual machines:
@@ -49,6 +52,7 @@ wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.2022
 ./vstart.sh worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 debian-user-data.yaml
 ./vstart.sh worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64-disk-kvm.img debian-user-data.yaml
 ./vstart.sh worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
+./vstart.sh worker-node-fedora Fedora-Cloud-Base-36-1.5.x86_64.raw fedora-user-data.yaml
 ```
 
 
@@ -69,6 +73,7 @@ are ever given new IP addresses by dhcp.***
 **`debian`** is the default user for Debian
 **`ubuntu`** is the default user for Ubuntu
 **`ec2-user`** for Amazon Linux2
+**`fedora`** for Fedora, etc...
 
 *Cloud-init should be finished and the VM instances should be ready after a little while (can be several minutes).*
 
@@ -85,5 +90,6 @@ Name               OS                                KernelVersion              
 control-node-1     Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           1983768Ki
 worker-node-amzn2  Amazon Linux 2                    4.14.296-222.539.amzn2.x86_64   1007756Ki
 worker-node-debian Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           977688Ki
+worker-node-fedora Fedora Linux 36 (Cloud Edition)   6.0.5-200.fc36.x86_64           986148Ki
 worker-node-ubuntu Ubuntu 22.10                      5.19.0-1010-kvm                 1008216Ki
 ```
