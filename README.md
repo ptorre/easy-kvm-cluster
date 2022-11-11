@@ -13,6 +13,7 @@ Simple steps:
 1. Create a nocloud data source for cloud-init starting with these:
     - [debian-user-data.yaml](/debian-user-data.yaml)
     - [amzn2-user-data.yaml](/amzn2-user-data.yaml)
+    - [rocky-user-data.yaml](/rocky-user-data.yaml)
 1. Run virt-install to start the VMs as many as you need, use [vstart.sh](/vstart.sh)
 
 The below is a bash script that can be used to quickly startup multiple local instances.
@@ -49,6 +50,7 @@ wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.2022
 ./vstart.sh worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 debian-user-data.yaml
 ./vstart.sh worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64-disk-kvm.img debian-user-data.yaml
 ./vstart.sh worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
+./vstart.sh worker-node-rocky Rocky-9-GenericCloud-9.0-20220830.0.x86_64.qcow2 rocky-user-data.yaml
 ```
 
 
@@ -69,6 +71,7 @@ are ever given new IP addresses by dhcp.***
 **`debian`** is the default user for Debian
 **`ubuntu`** is the default user for Ubuntu
 **`ec2-user`** for Amazon Linux2
+**`rocky`** for Rocky, etc...
 
 *Cloud-init should be finished and the VM instances should be ready after a little while (can be several minutes).*
 

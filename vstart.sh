@@ -27,6 +27,10 @@ vstart () {
         os='debian10'
     elif [[  "${image}" =~ [Uu]buntu ]];then
         os='ubuntu20.04'
+    elif [[  "${image}" =~ [Rr]ocky ]];then
+        os="rhel8.2"
+        memory="1536"
+        needs_expansion='false'
     else
         echo "OS unknown ${image} needs to be added to script types!" >& 2
         return 1

@@ -1,0 +1,64 @@
+#cloud-config
+---
+# better to use your own public key here
+ssh_authorized_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCysKo75UfUVeWNjg2pQCpwi9h4u3McF9XjdJVDsIuCB6Oem2zjDY3sHtC6SESMctrCagmdzPoHSO1kqfoab/3yIs49K+tMieBWZZ0lZjuU8jj5uZxlZRl8+CX6vhmkgyZOEnSVLe0Q1VIDiyowRMlV642nQJOny+BzpHjsURoxec3Xy/Zcaxc7kaRAjXH51e51FpKJIA7ib5rFXHTVQHJpe9TTIu/2yWgZkM55oY+RbndwBdKp7AkyyCCF0CpF0y3irlslQgwMI3XQoPwIQLJZ/bpiq5exiPG608K7a+5Y3kToWNTxsw5NcXOkimGd4BJ4dLr+KUzvXsjHIyyinC30QWHSAu8UftesvO95WpQOaEKDsqRUlB/s6caraV4QexXpnBC0WjcsQ3I4c6A4gDzkE+C4dPZ1X9k4WhEvIDOGnBhqL+YLs5vg9wJCCF3y56itTA4ieVymjKjj3q0vR5VKQhdLrIp6SAjQOPVf9ok0CYlcCyRGZaCIxcbzuEYGcLE="
+  - "ssh-rsa \
+  AAAAB3NzaC1yc2EAAAADAQABAAABgQC7O1Y3p4/D2XnWeiMoAx9GYPNCdoe11F1Jy42ZoG\
+  iczg6wPvAJhyTzI4q6cTMemZZFDhBLY6RyBWz8yPhIWZIvO+mKxsEuJpg8LSGcgrKmHj9H\
+  7OUslXp/ppyPdeqFmKruLxtYpb3/HcZfaktcOAOl9BLXpF6nZzCfP6HVFlX2RdF2akbxJS\
+  j1bChlgrgP1WzyGFx7waSupxfhzudXHbUJoq007hnzpeJJJbpv3lATbn/3Bq9GTv2BjZiJ\
+  RS7AyvmoYawodjntzeCGI4GlHEfRU8Fsla12lSQ/w4k60/6cLR7eDWZXV+93xIgU25DKMH\
+  Gc5aBLJfMa/yQFHrREOGAhk/osO2CBz3J0JUOEDgkSWbEgHgiWZaso4/TSXjoV+kI+2ubv\
+  CVcfDBJSItCtaJoTeIRaG/ruYoX+S9Z43V6k2KiMQv69U4K8vDkwqDQdQd2paHFCgorlmk\
+  PXTFF2ner78h0RTNB69AaPURV/ljPBOYXPCS4Qy4d9aJpHKeFq7GU="
+
+package_update: true
+package_upgrade: true
+packages:
+  - podman
+  - kubectl
+  - kubeadm
+  - kubelet
+
+yum_repos:
+  # The name of the repository
+  kubernetes:
+    name: kubernetes
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch
+    enabled: true
+    gpgcheck: true
+    repo_gpgcheck: false
+    gpgkey: https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/20permit-tunnel.conf
+    content: |
+      # Allow admin to use tun device point-to-point forwarding
+      Match User admin
+        PermitTunnel point-to-point
+  - path: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+  - path: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+
+runcmd:
+  - sed -i -e '/^AcceptEnv/s/^/#/' /etc/ssh/sshd_config
+  - /etc/init.d/ssh reload
+  - setenforce 0
+  - sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+  - modprobe overlay
+  - modprobe br_netfilter
+  - sysctl --system
+  - swapon
+  - zramctl
+  - dnf -y remove zram-generator-defaults
+  - swapoff -a
+  - systemctl enable --now containerd.service
+  - systemctl enable --now kubelet.service
+...
