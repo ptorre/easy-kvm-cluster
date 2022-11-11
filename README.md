@@ -1,12 +1,14 @@
 ## Notes on easily setting up KVM virtual machines for local k8s cluster development
 
-Simple methods to quickly spin up and tear down virtual machines localy using virt-install and cloud images
+Simple methods to quickly spin up and tear down virtual machines localy using virt-install and cloud images.
+
+Using prebuilt cloud images is usually much faster than running through a distro install to setup new VMs.
 
 Simple steps:
 1. Download the cloud image you want to use: [see full example](#full-example)
-  - https://cloud.debian.org/cdimage/cloud/
-  - https://cloud-images.ubuntu.com/releases/22.10/release/
-  - https://cdn.amazonlinux.com/os-images/2.0.20221004.0/
+    - https://cloud.debian.org/cdimage/cloud/
+    - https://cloud-images.ubuntu.com/releases/22.10/release/
+    - https://cdn.amazonlinux.com/os-images/2.0.20221004.0/
 1. Copy and grow the downloaded cloud image filesystem
 1. Create a nocloud data source for cloud-init starting with these:
     - [debian-user-data.yaml](/debian-user-data.yaml)
@@ -15,8 +17,10 @@ Simple steps:
 
 The below is a bash script that can be used to quickly startup multiple local instances.
 The instance disk file names will be based on the hostname used.
-The Debian _genericcloud_, Ubuntu _kvm_ and Amazon Linux 2 images work well with some
-minor user-data tweaks.
+The Debian _genericcloud_, Ubuntu _kvm_ and Amazon Linux 2 _kvm_ images work well with
+only minor user-data tweaks.  _Fedora_ and _Rocky_ have not been as easy to get set up,
+as those images need for more package updates and take far longer to be ready.  If you
+prefer Red Hat based distros, the Amazon images are a good choice.
 
 ***IMPORTANT*** You should add your own public key to admin user's authorized_keys
 file intead of mine...
@@ -34,7 +38,7 @@ ssh_authorized_keys:
 
 ```
 wget https://cdimage.debian.org/cdimage/cloud/bullseye/20221020-1174/debian-11-genericcloud-amd64-20221020-1174.qcow2
-wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img
+wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64-disk-kvm.img
 wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2
 ```
 - _its a good idea to verify the images using the signatures, but I leave that up to you_
@@ -43,16 +47,24 @@ wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.2022
 ```
 ./vstart.sh control-node-1 debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml 2048  # 2048MiB for control-plane-node (default is 1024MiB)
 ./vstart.sh worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 debian-user-data.yaml
-./vstart.sh worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64.img debian-user-data.yaml
+./vstart.sh worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64-disk-kvm.img debian-user-data.yaml
 ./vstart.sh worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
 ```
 
 
-_**Running `virsh net-dhcp-leases default` or `virsh domifaddr <name>` will give you the
-ip addresses for the created VMs.**_
+_**Running `virsh domifaddr <name>` will give you the ip addresses for a VM.**_
 
-***By default these images will use have IP addresses assigned by dhcp.  You should reserve the addresses assiged to the control plane nodes using
-`virsh net-edit` OR use the control plane hostname instead of the IP address when executing `kubectl join`.  If you don't do this the cluster will stop working if the control plane nodes are ever given new IP addresses by dhcp.***
+***By default these images will have IP addresses assigned by dhcp.
+If you plan on keeping them around for a while You should reserve the
+addresses assiged to the control plane nodes (use the mac and ip address
+returned by the above command):***
+```
+virsh net-update default add-last ip-dhcp-host \
+  '<host name="control-node" mac="52:54:00:e1:48:63" ip="192.168.122.57"/>' \
+  --live --config
+```
+***If you don't do this the cluster will stop working if the control plane nodes
+are ever given new IP addresses by dhcp.***
 
 **`debian`** is the default user for Debian
 **`ubuntu`** is the default user for Ubuntu
@@ -67,10 +79,11 @@ _After creating a k8s cluster using `kubeadm init` and `kubeadm join`, I have th
 
 ```
 $ kubectl get nodes -o custom-columns='Name:..name,OS:..osImage,KernelVersion:..kernelVersion,Memory:..capacity.memory'
-
+```
+```
 Name               OS                                KernelVersion                   Memory
 control-node-1     Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           1983768Ki
 worker-node-amzn2  Amazon Linux 2                    4.14.296-222.539.amzn2.x86_64   1007756Ki
 worker-node-debian Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           977688Ki
-worker-node-ubuntu Ubuntu 22.10                      5.19.0-23-generic               967372Ki
+worker-node-ubuntu Ubuntu 22.10                      5.19.0-1010-kvm                 1008216Ki
 ```
