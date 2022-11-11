@@ -9,10 +9,11 @@ Simple steps:
   - https://cdn.amazonlinux.com/os-images/2.0.20221004.0/
 1. Copy and grow the downloaded cloud image filesystem
 1. Create a nocloud data source for cloud-init starting with these:
-    [user-data.yaml](/user-data.yaml) and [amzn2-user-data.yaml](/amzn2-user-data.yaml)
+    - [debian-user-data.yaml](/debian-user-data.yaml)
+    - [amzn2-user-data.yaml](/amzn2-user-data.yaml)
 1. Run virt-install to start the VMs as many as you need, use [vstart.sh](/vstart.sh)
 
-The below is a bash script that I use to quickly startup multiple local instances.
+The below is a bash script that can be used to quickly startup multiple local instances.
 The instance disk file names will be based on the hostname used.
 The Debian _genericcloud_, Ubuntu _kvm_ and Amazon Linux 2 images work well with some
 minor user-data tweaks.
@@ -27,25 +28,25 @@ ssh_authorized_keys:
 ```
 
 ## Full Example:
-- Make sure you have the dependencies installed: `cloud-localds`, `qemu-img` and `virt-install`
-- Save the bash script [vstart.sh](/vstart.sh) and make it executable `chmod +x vstart`
-- Save the [user-data.yaml](/user-data.yaml) and modify to add your own ssh public keys
+- Make sure you have the dependencies installed: `libvirt-daemon`, `libvirt-clients`, `cloud-localds`, `qemu-img` and `virt-install` and that you can successfully run virtual machines using these tools before you start.
+- Edit the user-data yaml files to add your own ssh public keys
 - Download some cloud images:
-  - `wget https://cdimage.debian.org/cdimage/cloud/bullseye/20221020-1174/debian-11-genericcloud-amd64-20221020-1174.qcow2`
-  - `wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img`
-  - `wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2`
-    - you'll need to download and modify [amzn2-user-data.yaml](/amzn2-user-data.yaml) as well in this case
+
+```
+wget https://cdimage.debian.org/cdimage/cloud/bullseye/20221020-1174/debian-11-genericcloud-amd64-20221020-1174.qcow2
+wget https://cloud-images.ubuntu.com/releases/22.10/release/ubuntu-22.10-server-cloudimg-amd64.img
+wget https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2
+```
 - _its a good idea to verify the images using the signatures, but I leave that up to you_
 - Start some virtual machines:
+
 ```
-./vstart control-node-1 debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml 2048  # 2048MiB for control-plane-node (default is 1024MiB)
-./vstart worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml
-./vstart worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64.img user-data.yaml
-./vstart worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
-...etc.
+./vstart.sh control-node-1 debian-11-genericcloud-amd64-20221020-1174.qcow2 user-data.yaml 2048  # 2048MiB for control-plane-node (default is 1024MiB)
+./vstart.sh worker-node-debian debian-11-genericcloud-amd64-20221020-1174.qcow2 debian-user-data.yaml
+./vstart.sh worker-node-ubuntu ubuntu-22.10-server-cloudimg-amd64.img debian-user-data.yaml
+./vstart.sh worker-node-amzn2 amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2 amzn-user-data.yaml
 ```
 
-*After a little while (can be several minutes) the VM instances should be ready for you to ssh into them*
 
 _**Running `virsh net-dhcp-leases default` or `virsh domifaddr <name>` will give you the
 ip addresses for the created VMs.**_
@@ -53,7 +54,23 @@ ip addresses for the created VMs.**_
 ***By default these images will use have IP addresses assigned by dhcp.  You should reserve the addresses assiged to the control plane nodes using
 `virsh net-edit` OR use the control plane hostname instead of the IP address when executing `kubectl join`.  If you don't do this the cluster will stop working if the control plane nodes are ever given new IP addresses by dhcp.***
 
-**`debian`** is the default user for Debian and **`ubuntu`** is the default user for Ubuntu, **`ec2-user`** for Amazon Linux2, etc...
+**`debian`** is the default user for Debian
+**`ubuntu`** is the default user for Ubuntu
+**`ec2-user`** for Amazon Linux2
 
-After logging in you can run `cloud-init status --long --wait` and when that shows `status: done`,
+*Cloud-init should be finished and the VM instances should be ready after a little while (can be several minutes).*
+
+After logging in you, can run `sudo cloud-init status --long --wait` and when that shows `status: done`,
 finish installing a k8s cluster with `kubeadm` and `kubectl`. (https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
+
+_After creating a k8s cluster using `kubeadm init` and `kubeadm join`, I have the following:_
+
+```
+$ kubectl get nodes -o custom-columns='Name:..name,OS:..osImage,KernelVersion:..kernelVersion,Memory:..capacity.memory'
+
+Name               OS                                KernelVersion                   Memory
+control-node-1     Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           1983768Ki
+worker-node-amzn2  Amazon Linux 2                    4.14.296-222.539.amzn2.x86_64   1007756Ki
+worker-node-debian Debian GNU/Linux 11 (bullseye)    5.10.0-19-cloud-amd64           977688Ki
+worker-node-ubuntu Ubuntu 22.10                      5.19.0-23-generic               967372Ki
+```
