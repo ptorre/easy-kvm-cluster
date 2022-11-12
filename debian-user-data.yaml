@@ -21,6 +21,9 @@ apt:
         deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg]
         https://apt.kubernetes.io/ kubernetes-xenial main
 
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
 packages:
   - containerd
   - kubectl
@@ -42,7 +45,11 @@ write_files:
       net.bridge.bridge-nf-call-iptables  = 1
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward                 = 1
-  - path: /tmp/config.toml
+  - path: /etc/environment
+    content: |
+      CONTAINER_RUNTIME_ENDPOINT="unix:///run/containerd/containerd.sock"
+    append: true
+  - path: /var/tmp/config.toml
     # distro containerd config file is broken for k8s, replace it
     content: |
       version = 2
@@ -112,7 +119,7 @@ runcmd:
   - sysctl --system
   - apt-mark hold kubelet kubeadm kubectl
   - mkdir -p /etc/containerd
-  - mv /tmp/config.toml /etc/containerd/config.toml
+  - mv /var/tmp/config.toml /etc/containerd/config.toml
   - systemctl restart containerd.service
   - systemctl restart kubelet.service
 ...
